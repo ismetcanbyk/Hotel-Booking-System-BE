@@ -26,7 +26,6 @@ router.get("/categories/stats", roomController.getCategoryStats);
 // Customer routes
 router.get(
   "/",
-  authenticate,
   validateQuery(roomValidators.roomFilter),
   roomController.getRooms
 );

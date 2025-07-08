@@ -3,7 +3,7 @@ import { verifyAccessToken, extractTokenFromHeader } from "../utils/jwt";
 import { getCollection, COLLECTIONS } from "../config/database";
 import { User, UserRole } from "../types";
 import { ObjectId } from "mongodb";
-import { ResponseHelper } from "@/utils/response";
+import { ResponseHelper } from "../utils/response";
 
 export const authenticate = async (
   req: Request,
