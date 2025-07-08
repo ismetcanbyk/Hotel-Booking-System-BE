@@ -21,30 +21,45 @@ export const authenticate = async (
 
     const payload = verifyAccessToken(token) as any;
 
-    const usersCollection = getCollection<User>(COLLECTIONS.USERS);
-    const user = await usersCollection.findOne({
-      _id: new ObjectId(payload.userId.toString()),
-      isActive: true,
-    });
+    try {
+      const usersCollection = getCollection<User>(COLLECTIONS.USERS);
+      const user = await usersCollection.findOne({
+        _id: new ObjectId(payload.userId.toString()),
+        isActive: true,
+      });
 
-    if (!user) {
-      ResponseHelper.error(res, "User not found or account deactivated", 401);
+      if (!user) {
+        ResponseHelper.error(res, "User not found or account deactivated", 401);
+        return;
+      }
+
+      req.user = user;
+
+      // Update last login - don't fail if database is not available
+      await usersCollection
+        .updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              lastLoginAt: new Date(),
+              updatedAt: new Date(),
+            },
+          }
+        )
+        .catch((err) => {
+          console.warn("Failed to update last login time:", err);
+        });
+
+      next();
+    } catch (dbError) {
+      console.error("Database error during authentication:", dbError);
+      ResponseHelper.error(
+        res,
+        "Database unavailable - authentication failed",
+        503
+      );
       return;
     }
-
-    req.user = user;
-
-    await usersCollection.updateOne(
-      { _id: user._id },
-      {
-        $set: {
-          lastLoginAt: new Date(),
-          updatedAt: new Date(),
-        },
-      }
-    );
-
-    next();
   } catch (error) {
     console.error("Authentication error:", error);
 

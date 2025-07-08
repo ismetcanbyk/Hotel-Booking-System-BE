@@ -49,6 +49,16 @@ app.use("/api/", limiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Health check endpoint for Cloud Run
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Hotel Booking System API - Health Check",
+    status: "healthy",
+    timestamp: new Date(),
+  });
+});
+
 // API info endpoint
 app.get("/api", (req, res) => {
   res.json({
@@ -117,12 +127,47 @@ process.on("unhandledRejection", (reason, promise) => {
   gracefulShutdown("unhandledRejection");
 });
 
+// Connect to external services with retries
+async function connectToServices() {
+  console.log("🔗 Connecting to external services...");
+
+  // Connect to MongoDB with retries
+  for (let i = 0; i < 3; i++) {
+    try {
+      await database.connect();
+      console.log("✅ MongoDB connected successfully");
+      break;
+    } catch (error) {
+      console.warn(`⚠️ MongoDB connection attempt ${i + 1}/3 failed:`, error);
+      if (i === 2) {
+        console.error("❌ MongoDB connection failed after 3 attempts");
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2s before retry
+      }
+    }
+  }
+
+  // Connect to Redis with retries
+  for (let i = 0; i < 3; i++) {
+    try {
+      await redis.connect();
+      console.log("✅ Redis connected successfully");
+      break;
+    } catch (error) {
+      console.warn(`⚠️ Redis connection attempt ${i + 1}/3 failed:`, error);
+      if (i === 2) {
+        console.error("❌ Redis connection failed after 3 attempts");
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2s before retry
+      }
+    }
+  }
+}
+
 // Start server
 async function startServer() {
   try {
-    await database.connect();
-    await redis.connect();
-
+    // Start server first - don't wait for database connections
     const server = app.listen(config.server.port, () => {
       console.log(`🌐 Server running on port ${config.server.port}`);
       console.log(`📍 API URL: http://localhost:${config.server.port}/api`);
@@ -136,6 +181,12 @@ async function startServer() {
         console.error("❌ Server error:", error);
       }
       process.exit(1);
+    });
+
+    // Connect to services in background after server starts
+    connectToServices().catch((error) => {
+      console.error("⚠️ Some external services failed to connect:", error);
+      // Don't exit - let the server continue running
     });
 
     return server;
