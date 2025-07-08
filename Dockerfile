@@ -58,10 +58,10 @@ USER nodejs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/api', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Expose port (Cloud Run will set PORT environment variable)
-EXPOSE 3000
+EXPOSE 8080
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]

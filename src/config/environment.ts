@@ -7,7 +7,7 @@ const envSchema = z.object({
   // Server Configuration
   PORT: z
     .string()
-    .default("3000")
+    .default("8080")
     .transform((val) => parseInt(val, 10)),
   NODE_ENV: z
     .enum(["development", "production", "test"])
