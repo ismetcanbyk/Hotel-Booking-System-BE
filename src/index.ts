@@ -21,12 +21,14 @@ app.use(
   })
 );
 
-// CORS
+// CORS - Allow all origins for development
 app.use(
   cors({
-    origin: config.cors.origin,
-    credentials: config.cors.credentials,
+    origin: true, // Allow all origins
+    credentials: true,
     optionsSuccessStatus: 200,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 

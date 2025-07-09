@@ -2,6 +2,10 @@
 
 A modern and comprehensive hotel booking system backend API. Built with TypeScript, Express.js, MongoDB, and Redis technologies.
 
+## 🔗 Related Projects
+
+🎨 **Frontend Application**: [Hotel Booking System - Frontend](https://github.com/ismetcanbyk/Hotel-Booking-System-FE)
+
 ## 🌟 Features
 
 ### 🔐 Authentication & Authorization
