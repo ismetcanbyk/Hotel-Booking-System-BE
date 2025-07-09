@@ -344,7 +344,7 @@ export class BookingService {
     filter: IBookingFilter,
     page = 1,
     limit = 10
-  ): Promise<PaginatedResponse<IBooking>> {
+  ): Promise<PaginatedResponse<IBookingDetails>> {
     const mongoFilter: any = {};
 
     if (filter.userId) {
@@ -367,22 +367,71 @@ export class BookingService {
 
     const skip = (page - 1) * limit;
 
-    const [bookings, total] = await Promise.all([
-      this.bookingsCollection
-        .find(mongoFilter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-      this.bookingsCollection.countDocuments(mongoFilter),
+    const pipeline = [
+      { $match: mongoFilter },
+      {
+        $lookup: {
+          from: COLLECTIONS.ROOMS,
+          localField: "roomId",
+          foreignField: "_id",
+          as: "roomData",
+        },
+      },
+      { $unwind: "$roomData" },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          localField: "userId",
+          foreignField: "_id",
+          as: "userData",
+        },
+      },
+      { $unwind: "$userData" },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          roomId: 1,
+          checkInDate: 1,
+          checkOutDate: 1,
+          numberOfGuests: 1,
+          totalAmount: 1,
+          status: 1,
+          paymentStatus: 1,
+          specialRequests: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          room: {
+            roomNumber: "$roomData.roomNumber",
+            category: "$roomData.category",
+            bedType: "$roomData.bedType",
+          },
+          user: {
+            firstName: "$userData.firstName",
+            lastName: "$userData.lastName",
+            email: "$userData.email",
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ];
+
+    const countPipeline = [{ $match: mongoFilter }, { $count: "total" }];
+
+    const [bookings, countResult] = await Promise.all([
+      this.bookingsCollection.aggregate(pipeline).toArray(),
+      this.bookingsCollection.aggregate(countPipeline).toArray(),
     ]);
 
+    const total = countResult[0]?.total || 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
       success: true,
       message: "Bookings retrieved successfully",
-      data: bookings,
+      data: bookings as IBookingDetails[],
       pagination: {
         page,
         limit,
